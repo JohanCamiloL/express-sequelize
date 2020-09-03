@@ -126,6 +126,21 @@ app.delete('/songs/:id', async (req, res, next) => {
 	}
 });
 
+/**
+ * Get all songs
+ */
+app.get('/songs', async (req, res, next) => {
+	const query = 'SELECT * FROM canciones';
+
+	try {
+		const data = await executeQuery(query, {}, true);
+
+		res.status(200).json({ data });
+	} catch (error) {
+		next(error);
+	}
+});
+
 app.use((error, req, res, next) => {
 	if (error) {
 		console.log(error);
