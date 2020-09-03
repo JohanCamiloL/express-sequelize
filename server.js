@@ -109,6 +109,23 @@ app.put('/songs/:id', async (req, res, next) => {
 	}
 });
 
+/**
+ * Deletes a song by the given id
+ */
+app.delete('/songs/:id', async (req, res, next) => {
+	const id = parseInt(req.params.id);
+
+	const query = 'DELETE FROM canciones WHERE id = :id';
+
+	try {
+		const data = await executeQuery(query, { id }, false);
+
+		res.status(204).json({});
+	} catch (error) {
+		next(error);
+	}
+});
+
 app.use((error, req, res, next) => {
 	if (error) {
 		console.log(error);
