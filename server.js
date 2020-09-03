@@ -69,28 +69,41 @@ app.get('/songs/:name', async (req, res, next) => {
 	}
 });
 
+/**
+ * Update the given song.
+ */
 app.put('/songs/:id', async (req, res, next) => {
-	const id = req.params.id;
-	const { nombre, duracion, album, banda, fechaPublicacion } = req.body;
+	const id = parseInt(req.params.id);
+	let { nombre, duracion, album, banda, fechaPublicacion } = req.body;
+
+	// El select es un arreglo, obtenemos el unico valor que nos retorna un id.
+	const song = (await getSongById(id))[0];
+
+	// Validates if a song exists by the given id.
+	if (!song) {
+		res.status(404).json({ error: `Song with id ${id} doesn't exists` });
+		return;
+	}
+
+	// Set some null values to its current value.
+	nombre = nombre || song.nombre;
+	duracion = duracion || song.duracion;
+	album = album || song.album;
+	banda = banda || song.banda;
+	fechaPublicacion = fechaPublicacion || song.fechaPublicacion;
 
 	const query = `
 		UPDATE canciones
-		SET nombre = :nombre, duracion = :duracion, album = :album, banda = :banda, fechaPublicacion = :fechaPublicacion
+		SET nombre = :nombre, duracion = :duracion, album = :album, banda = :banda, fecha_publicacion = :fechaPublicacion
 		WHERE id = :id;
 	`;
 
 	try {
-		const data = await sequelize.query(query, {
-			replacements: {
-				nombre,
-				duracion,
-				album,
-				banda,
-				fechaPublicacion
-			}
-		});
+		await executeQuery(query, { nombre, duracion, album, banda, fechaPublicacion, id }, false);
 
-		res.status(200).json({ data });
+		const newSong = await getSongById(id);
+
+		res.status(200).json({ data: newSong });
 	} catch (error) {
 		next(error);
 	}
@@ -112,3 +125,39 @@ app.listen(SERVER_PORT, () => {
 
 	console.log('Server listening on port 3000');
 });
+
+/**
+ * Get a song by the given id.
+ * @param {Number} id Song id.
+ * @returns {Object} Song object.
+ */
+const getSongById = async (id) => {
+	const query = `
+		SELECT * FROM canciones WHERE id = :id;
+	`;
+
+	let song;
+
+	try {
+		song = await executeQuery(query, { id }, true);
+	} catch (error) {
+		console.log(error);
+	}
+
+	return song;
+}
+
+/**
+ * Execute the given query with sequelize.
+ * @param {String} query SQL Query.
+ * @param {Object} replacements Replacements object
+ * @param {Boolean} isSelectQuery If query is a select statement or not.
+ * @returns {Promise} Sequelize promise.
+ */
+const executeQuery = async (query, replacements, isSelectQuery) => {
+
+	return await sequelize.query(query, {
+		type: (isSelectQuery ? sequelize.QueryTypes.SELECT : undefined),
+		replacements
+	});
+}
